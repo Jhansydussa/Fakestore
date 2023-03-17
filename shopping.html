@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fakestore API</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <style type="text/css">
+      .main-card:hover {
+        box-shadow: 2px 2px 2px gray;
+      }
+    </style>
+    <script type="text/javascript">
+      function LoadCategories() {
+        fetch("https://fakestoreapi.com/products/categories")
+          .then(function (response) {
+            return response.json(); // data coming in binary form and json converting binary from into data [this is call back function]
+          })
+          .then(function (data) {
+            data.unshift("all");
+
+            for (var item of data) {
+              var option = document.createElement("option");
+
+              option.text = item.toUpperCase();
+              option.value = item;
+
+              document.getElementById("lstCategories").appendChild(option);
+            }
+          });
+      }
+      function LoadProducts(url) {
+        fetch(url)
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            //document.getElementById("catalog").innerHTML = "";
+
+            for (var item of data) {
+              var card = document.createElement("div");
+
+              card.className = "card  main-card p-2 m-2";
+              card.style.width = "200px";
+
+              card.innerHTML = `
+                    <img src=${item.image} class="card-top-image" height="140px">
+                    <div class="card-header" style="height:140px">
+                        <p>${item.title}</p>
+                   </div>
+                   <div class="card-body">
+                    <dl>
+                        <dt>Price</dt>
+                        <dd>${item.price}</dd>
+                        <dt>Rating</dt>
+                        <dd>
+                            <span class="bi bi-star-fill text-success"> ${item.rating.rate}</span> [${item.rating.count}]
+                       </dd>
+                   </dl>
+                  </div>
+                   <div class="card-footer">
+                       <button onclick="AddClick(${item.id})" class="btn btn-success text-white w-100">
+                           <span class="bi bi-cart4"></span>  Add to Cart
+                      </button>
+                  </div>
+                    `;
+              document.getElementById("catalog").appendChild(card);
+            }
+          });
+      }
+
+      function CategoryChanged() {
+        var categoryname = document.getElementById("lstCategories").value;
+        if (categoryname == "all") {
+          document.getElementById("catalog").innerHTML = "";
+          LoadProducts("https://fakestoreapi.com/products");
+        } else {
+          document.getElementById("catalog").innerHTML = "";
+          LoadProducts(
+            `https://fakestoreapi.com/products/category/${categoryname}`
+          );
+        }
+      }
+
+      var arr = [];
+      var cartItems = [];
+      function GetCartCount() {
+        document.getElementById("count").innerHTML = "";
+
+        document.getElementById("count").innerHTML = cartItems.length;
+      }
+      function AddClick(id) {
+        fetch(`https://fakestoreapi.com/products/${id}`)
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            arr.unshift(data.price);
+            cartItems.push(data);
+            alert(`${data.title} Added to Card ${id}`);
+            GetCartCount();
+          });
+      }
+      function LoadCartItems() {
+        document.querySelector("tbody").innerHTML = "";
+        for (var item of cartItems) {
+          var tr = document.createElement("tr");
+          var tdTitle = document.createElement("td");
+          var tdPrice = document.createElement("td");
+          var tdPreview = document.createElement("td");
+          var tdAction = document.createElement("td");
+          tdTitle.innerHTML = `${item.title}`;
+          tdPrice.innerHTML = `${item.price}`;
+          tdPreview.innerHTML = `<img width="50" height="50" src=${item.image}>`;
+          tdAction.innerHTML = `<button onclick="RemoveClick(${item.id})" class="btn btn-outline-danger"><span class="bi bi-trash"></span> Remove</button>`;
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdPrice);
+          tr.appendChild(tdPreview);
+          tr.appendChild(tdAction);
+          document.querySelector("tbody").appendChild(tr);
+        }
+        document.querySelector("tfoot").innerHTML = "";
+        var tr = document.createElement("tr");
+        var th = document.createElement("td");
+        var span = document.createElement("span");
+        th.innerHTML = "Total Amount".bold();
+        var Total = 0;
+        for (var i = 0; i < arr.length; i++) {
+          Total += arr[i];
+        }
+        span.innerHTML = ` ${Total}`;
+        th.appendChild(span);
+        tr.appendChild(th);
+        document.querySelector("tfoot").appendChild(tr);
+      }
+      function RemoveClick(id) {
+        fetch(`https://fakestoreapi.com/products/${id}`)
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            const index = cartItems.findIndex((cartItem) => cartItem.id === id)
+            console.log(index, cartItems, id)
+            cartItems.splice(index, 1);
+            arr.splice(index, 1); //i need to work on this more
+            alert(`${data.title} Removed item from Card ${id}`);
+            LoadCartItems();
+            GetCartCount();
+          });
+      }
+      function bodyload() {
+        LoadCategories();
+        LoadProducts("https://fakestoreapi.com/products");
+      }
+    </script>
+  </head>
+  <body class="container-fluid mt-3" onload="bodyload()">
+    <header class="bg-danger text-center text-white p-2 mb-2">
+      <h1><span class="bi bi-cart2"></span> Shopping</h1>
+    </header>
+    <section class="row">
+      <nav class="col-2">
+        <label class="form-label">Select Category</label>
+        <div>
+          <select
+            onchange="CategoryChanged()"
+            id="lstCategories"
+            class="from-control"
+          ></select>
+        </div>
+      </nav>
+      <main class="col-8">
+        <div
+          id="catalog"
+          class="d-flex flex-wrap overflow-auto w-100"
+          style="height: 600px"
+        ></div>
+      </main>
+      <aside class="col-2">
+        <button
+          onclick="LoadCartItems()"
+          data-bs-toggle="modal"
+          data-bs-target="#cart"
+          class="btn btn-danger w-100"
+        >
+          <span class="bi bi-cart3">[<span id="count"></span>]</span>Your Cart
+        </button>
+        <div class="modal fade w-100" id="cart">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Your Cart Items</h3>
+                <button data-bs-dismiss="modal" class="btn btn-close"></button>
+              </div>
+              <div class="modal-body">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Price</th>
+                      <th>Preview</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                  <tfoot></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+    <script src="../node_modules/jquery/dist/jquery.js"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.js"></script>
+  </body>
+</html>
